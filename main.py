@@ -166,6 +166,5 @@ for part, metrics in pose_metrics.metrics.items():
     print('\n', end='')  # Add an extra newline for separation between parts
 
 
-
 cv2.waitKey(0)
 cv2.destroyAllWindows()
