@@ -1,0 +1,100 @@
+Ending_Pain used points:
+0: Nose
+9: Mouth left
+10: Mouth right
+11: Left shoulder
+12: Right shoulder
+13: Left elbow
+14: Right elbow
+15: Left wrist
+16: Right wrist
+17: Left pinky
+18: Right pinky
+19: Left index
+20: Right index
+21: Left thumb
+22: Right thumb
+23: Left hip
+24: Right hip
+25: Left knee
+26: Right knee
+27: Left ankle
+28: Right ankle
+29: Left heel
+30: Right heel
+31: Left foot index
+32: Right foot index
+
+All Points (consistent):
+0: Nose
+1: Left eye inner
+2: Left eye
+3: Left eye outer
+4: Right eye inner
+5: Right eye
+6: Right eye outer
+7: Left ear
+8: Right ear
+9: Mouth left
+10: Mouth right
+11: Left shoulder
+12: Right shoulder
+13: Left elbow
+14: Right elbow
+15: Left wrist
+16: Right wrist
+17: Left pinky
+18: Right pinky
+19: Left index
+20: Right index
+21: Left thumb
+22: Right thumb
+23: Left hip
+24: Right hip
+25: Left knee
+26: Right knee
+27: Left ankle
+28: Right ankle
+29: Left heel
+30: Right heel
+31: Left foot index
+32: Right foot index
+
+
+This mapping remains consistent for the pose model, ensuring that each index corresponds to the same body part across
+different detections. This consistency is crucial for applications that require tracking the movement of specific
+body parts or analyzing posture over time.
+
+MediaPipe Pose estimation is designed to detect up to 33 landmarks on the human body when conditions allow for it.
+However, it may not always detect all landmarks in every frame or image. The behavior when it cannot match some of
+those key points depends on several factors, including the model's design, the quality of the input data, and the
+specific conditions under which the model is operating. Here’s how it generally handles such situations:
+
+1. Partial Detection: If the Pose model cannot confidently detect certain landmarks due to occlusion, poor lighting,
+or other challenging conditions, it might skip them or provide less accurate positions for those landmarks.
+This means that not all 33 landmarks are guaranteed to be detected in every frame or image.
+The model's output includes the confidence score for each detected landmark, which can be used to assess
+the reliability of each detected point.
+
+2. Consistency in Landmark Indexing: The indexing of landmarks remains consistent across all detections.
+For instance, index 19 will always refer to the left index finger if that landmark is detected.
+If the model cannot detect the left index finger, it will not assign index 19 to another body part.
+Instead, index 19 may either be absent from the output or have a very low confidence score,
+indicating uncertainty or non-detection.
+
+3. Adaptation and Tolerance: The Pose model does not dynamically adjust its tolerance or attempt alternative algorithms
+to force a match for missing landmarks. The detection and tracking of landmarks are based on the model's trained
+capabilities, which include recognizing human anatomical features and understanding typical human body configurations.
+The model has been trained on a diverse dataset to generalize across a wide range of poses, body types, and conditions,
+but its effectiveness can be limited by the factors mentioned above.
+
+4. Accuracy and Reliability: For critical applications where accuracy is paramount,
+it's essential to validate the pose estimation results. You can do this by checking the confidence scores
+associated with each landmark and implementing additional logic to handle cases where certain landmarks
+are not detected with high confidence. In some applications, it may be necessary to use multiple frames of data
+to infer missing landmarks or apply domain-specific knowledge to improve accuracy.
+
+5. Improving Detection Rates: To maximize the detection rate and accuracy of landmark detection:
+Ensure good lighting conditions.
+Minimize occlusions of key body parts.
+Use higher-resolution images where possible.
