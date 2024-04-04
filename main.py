@@ -1,39 +1,14 @@
 # ----------------------------------------------------------------------------------------------
 # Ending Pain
 #
-# This tool is an image-processing socketing-bot for CQ online.
+# This tool is an image-processing tool for deep biomechanical readings and fixing plan.
 #
-# Author :  Neo
+# Author :  Neo & N1ptic
 # ----------------------------------------------------------------------------------------------
 import cv2
 import mediapipe as mp
 import numpy as np
-import math
-from metrics_classes import PoseMetrics
-
-
-def image_segmentation_mediapipe(img_path):
-    # Initialize MediaPipe Selfie Segmentation.
-    mp_selfie_segmentation = mp.solutions.selfie_segmentation
-    selfie_segmentation = mp_selfie_segmentation.SelfieSegmentation(model_selection=1)
-
-    image_rgb = read_and_covert_rgb(img_path)
-
-    # Get the segmentation mask.
-    results = selfie_segmentation.process(image_rgb)
-    segmentation_mask = results.segmentation_mask
-
-    # The mask contains values between 0 and 1, indicating how likely each pixel is to be part of the foreground.
-    segmentation_mask = segmentation_mask > 0.5  # Convert to a binary mask.
-
-    # Prepare a green background.
-    background = np.zeros(image_rgb.shape, dtype=np.uint8)
-    background[:] = [0, 255, 0]  # Green
-
-    # Combine the original image with the green background based on the mask.
-    foreground = np.where(segmentation_mask[:, :, None], image_rgb, background)
-
-    return foreground
+from metrics_classes import StationsMetrics, TracksMetrics
 
 
 # Define a function to draw 4x4 pixel squares on the given image at the specified center position.
@@ -49,25 +24,11 @@ def draw_grid(image, grid_size=8, color=(200, 200, 200)):  # Using light gray fo
                           1)  # Line thickness set to 1 for thin lines
 
 
-def color_difference_lab(color1, color2):
-    """Calculate the Euclidean distance between two color vectors in Lab space."""
-    return sum((a - b) ** 2 for a, b in zip(color1, color2)) ** 0.5
-
-
-def find_upper_end_lab(image, start_x, start_y, tolerance=15):
-    """Search upwards from the starting point in the Lab image to find where the color changes significantly."""
-    mother_color = image[start_y, start_x]
-    for y in range(start_y, max(-1, start_y - 200), -1):  # Search up to 200 pixels upwards.
-        current_color = image[y, start_x]
-        if color_difference_lab(current_color, mother_color) > tolerance:
-            return start_x, y + 1  # Return the position just before the color change.
-    return start_x, start_y  # If no change found, return the starting point.
-
-
 def read_and_covert_rgb(img_path):
     # Processing image: reading, resizing, converting to RGB for Mediapipe processing
     image = cv2.imread(img_path)
-    height, width, channels = image.shape
+    # Consider Re-sizing to default value or using original image size.
+    # height, width, channels = image.shape
     image = cv2.resize(image, (510, 680))
     image_rgb = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
 
@@ -102,7 +63,7 @@ def image_blueprint():
 
     # Print all the mapped points
     index = 0
-    print("Pose Results landmarks", pose_results.pose_landmarks.landmark)
+    # print("Pose Results landmarks", pose_results.pose_landmarks.landmark)
 
     # Mapping nose for figure centering
     nose_landmark = pose_results.pose_landmarks.landmark[0]
@@ -112,59 +73,67 @@ def image_blueprint():
     desired_x = width // 2
     desired_y = int(height * 0.2)
 
-    # Calculate shifts
+    # Calculate shifts for centering image
     shift_x = desired_x - nose_x
     shift_y = desired_y - nose_y
-    print("Calculated shifts (x,y)", shift_x, shift_y)
+    # print("Calculated shifts (x,y)", shift_x, shift_y)
 
     for idx, landmark in enumerate(pose_results.pose_landmarks.landmark):
         height, width, _ = image_rgb.shape
         # Correctly applying shifts to move landmarks towards the top left
         cx, cy = int(landmark.x * width) + shift_x, int(landmark.y * height) + shift_y
         if index > 8 or index == 0:
-            pose_metrics.update_landmark(index, (cx, cy))
+            stations_metrics.update_landmark(index, (cx, cy))
             draw_square(blueprint_image, (cx, cy), color=(255, 0, 0))  # Draw on the blueprint image.
         # Shoulders
         if 10 < index < 13:
-            pose_metrics.update_landmark(index, (cx, cy))
+            stations_metrics.update_landmark(index, (cx, cy))
             # Convert image to Lab color space for more uniform color difference evaluation.
             draw_square(blueprint_image, (cx, cy - 70), color=(0, 0, 255))
-        print(f"Landmark {idx}: ({cx}, {cy})")
+        # Left Shoulder test
+        if index == 11:
+            draw_square(blueprint_image, (cx, cy - 15), color=(45, 100, 99))
+        # print(f"Landmark {idx}: ({cx}, {cy})")
         index += 1
 
     return blueprint_image
 
 
 ###################
+###################
 # Starting Script #
 ###################
+###################
 
-pose_metrics = PoseMetrics()
-image_path = 'Photos/Anterior_view_1.JPG'
+stations_metrics = StationsMetrics()
+image_path = 'Photos/Anterior_view_3.JPG'
 
 pose_data, image_mediapipe = process_image_mediapipe(image_path)
 blueprint_processed_grid = image_blueprint()
-foreground_image = image_segmentation_mediapipe(image_path)
 
 # Convert the processed image back to BGR for displaying with OpenCV.
 image_bgr = cv2.cvtColor(image_mediapipe, cv2.COLOR_RGB2BGR)
-# Convert the processed image back to BGR for displaying with OpenCV.
-foreground_image_bgr = cv2.cvtColor(foreground_image, cv2.COLOR_RGB2BGR)
 
 # Display the original image with pose landmarks.
 cv2.imshow('Output BGR', image_bgr)
 # Display the blueprint grid.
 cv2.imshow('Blueprint with Landmarks', blueprint_processed_grid)
-# Display the image with foreground
-# cv2.imshow('Foreground with Green Background', foreground_image_bgr)
 
-print("Metrics:")
-for part, metrics in pose_metrics.metrics.items():
+# Updating Tracks class once Stations is complete.
+tracks_metrics = TracksMetrics(stations_metrics)
+
+print("\nStations Metrics: \n*Dictionary \nPositive Offset = Higher Left side Station (Point) ~= Right Side Compression"
+      "\nNegative Offset = Lower Left Side Station ~= Left Side Compression\n")
+for part, metrics in stations_metrics.metrics.items():
     print(f'{part}:')
     for key, value in metrics.items():
         print(f'  {key}: {value}')
     print('\n', end='')  # Add an extra newline for separation between parts
 
+print("\nTrack Metrics: \n*Dictionary \nPositive Offset = Right Lateral Line(Side) Compression"
+      "\nNegative Offset = Left LL. (Side) Compression\n")
+for track, details in stations_metrics.tracksMetrics.tracks.items():
+    print(f"{track}: {details}")
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
