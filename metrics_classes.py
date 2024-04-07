@@ -139,9 +139,9 @@ class StationsMetrics:
             quadrilateral = [wrist, thumb, pinky, wrist]
             area = _quadrilateral_area(quadrilateral)
 
-            if hand == 'Right Analysis':
+            if hand == 'Left Analysis':
                 left_hand_center = find_triangle_center_and_area(wrist, pinky, thumb)
-                rotation = 'External' if pinky[0] < thumb[0] else 'Internal'
+                rotation = 'Internal' if pinky[0] > thumb[0] else 'External'
             else:
                 right_hand_center = find_triangle_center_and_area(wrist, pinky, thumb)
                 rotation = 'Internal' if pinky[0] < thumb[0] else 'External'
@@ -149,7 +149,8 @@ class StationsMetrics:
             self.metrics['Hands'][hand]['Rotation'] = rotation
             self.metrics['Hands'][hand]['Rotation Degree'] = area
 
-        self.metrics['Hands']['Offset'] = left_hand_center[1] - right_hand_center[1]
+        formatted_offset = round(left_hand_center[1] - right_hand_center[1], 2)
+        self.metrics['Hands']['Offset'] = formatted_offset
         self.metrics['Hands']['Left'] = (int(left_hand_center[0]), int(left_hand_center[1]))
         self.metrics['Hands']['Right'] = (int(right_hand_center[0]), int(right_hand_center[1]))
 
@@ -169,9 +170,9 @@ class StationsMetrics:
             triangle_data = find_triangle_center_and_area(ankle, heel, foot_index)
             area = triangle_data[2]
 
-            if foot == 'Right Analysis':
+            if foot == 'Left Analysis':
                 left_foot_center = find_triangle_center_and_area(ankle, heel, foot_index)
-                rotation = 'Internal' if foot_index[0] < heel[0] else 'External'
+                rotation = 'External' if foot_index[0] > heel[0] else 'Internal'
             else:
                 right_foot_center = find_triangle_center_and_area(ankle, heel, foot_index)
                 rotation = 'External' if foot_index[0] < heel[0] else 'Internal'
@@ -179,7 +180,8 @@ class StationsMetrics:
             self.metrics['Feet'][foot]['Rotation'] = rotation
             self.metrics['Feet'][foot]['Rotation Degree'] = area
 
-        self.metrics['Feet']['Offset'] = left_foot_center[1] - right_foot_center[1]
+        formatted_offset = round(left_foot_center[1] - right_foot_center[1], 2)
+        self.metrics['Feet']['Offset'] = formatted_offset
         self.metrics['Feet']['Left'] = (int(left_foot_center[0]), int(left_foot_center[1]))
         self.metrics['Feet']['Right'] = (int(right_foot_center[0]), int(right_foot_center[1]))
 
@@ -266,8 +268,8 @@ class TracksMetrics:
         offset = calculate_percentage_difference(left_distance, right_distance)
 
         # Update the track information
-        self.tracks[track_name]['Left Length'] = left_distance
-        self.tracks[track_name]['Right Length'] = right_distance
+        self.tracks[track_name]['Left Length'] = round(left_distance, 2)
+        self.tracks[track_name]['Right Length'] = round(right_distance, 2)
         self.tracks[track_name]['Offset'] = offset
 
     def calculate_and_update_track_for_foot(self, left_idx, right_idx, left_foot_center, right_foot_center, track_name):
