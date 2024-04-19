@@ -1,49 +1,6 @@
+from geometry_utils import (quadrilateral_area, calculate_distance, calculate_angle_with_vertical,
+                            find_triangle_center_and_area, calculate_percentage_difference)
 import math
-
-
-def _quadrilateral_area(coords):
-    # Calculate the area of a quadrilateral using the Shoelace formula
-    n = len(coords)  # Should be 4 for a quadrilateral
-    area = 0.0
-    for i in range(n):
-        j = (i + 1) % n
-        area += coords[i][0] * coords[j][1]
-        area -= coords[j][0] * coords[i][1]
-    area = abs(area) / 2.0
-    return area
-
-
-def find_triangle_center_and_area(x, y, z):
-    # Assuming points is a list of three tuples: [(x1, y1), (x2, y2), (x3, y3)]
-    x1, y1 = x
-    x2, y2 = y
-    x3, y3 = z
-
-    # Calculate the center of the triangle
-    x_center = (x1 + x2 + x3) / 3
-    y_center = (y1 + y2 + y3) / 3
-
-    # Calculate the area of the triangle
-    area = abs((x1 * (y2 - y3) + x2 * (y3 - y1) + x3 * (y1 - y2)) / 2.0)
-
-    return x_center, y_center, area
-
-
-def calculate_distance(point1, point2):
-    distance = math.sqrt((point1[0] - point2[0]) ** 2 + (point1[1] - point2[1]) ** 2)
-    rounded_distance = round(distance, 2)
-    return rounded_distance
-
-
-def calculate_percentage_difference(left_length, right_length):
-    # Handle division by zero
-    if right_length == 0:
-        # Return a formatted string indicating no comparison can be made
-        return "N/A %"  # Adjust as needed, e.g., to "0.00 %" or another placeholder
-    # Calculate the percentage difference and format it as a string with two decimal places followed by '%'
-    offset = ((left_length - right_length) / right_length) * 100
-    formatted_offset = "{:.2f} %".format(offset)
-    return formatted_offset
 
 
 class StationsMetrics:
@@ -73,20 +30,20 @@ class StationsMetrics:
             29: {'name': 'Left heel', 'coords': (0, 0)},
             30: {'name': 'Right heel', 'coords': (0, 0)},
             31: {'name': 'Left foot index', 'coords': (0, 0)},
-            32: {'name': 'Right foot index', 'coords': (0, 0)},
+            32: {'name': 'Right foot index', 'coords': (0, 0)}
         }
 
         self.metrics = {
-            'Shoulders': {'Offset': 0},
-            'Hips': {'Offset': 0},
-            'Elbows': { 'Offset': 0},
-            'Knees': {'Offset': 0},
+            'Shoulders': {'Alpha': 0},
+            'Hips': {'Alpha': 0},
+            'Elbows': {'Alpha': 0},
+            'Knees': {'Alpha': 0},
             'Hands': {'Left Analysis': {'Rotation': 'Neutral', 'Rotation Degree': 0},
                       'Right Analysis': {'Rotation': 'Neutral', 'Rotation Degree': 0},
-                      'Offset': 0},
-            'Feet': {'Left Analysis': {'Rotation': 'Neutral', 'Rotation Degree': 0},
-                     'Right Analysis': {'Rotation': 'Neutral', 'Rotation Degree': 0},
-                     'Offset': 0},
+                      'Alpha': 0},
+            'Feet': {'Left Analysis': {'Center': (0, 0), 'Rotation': 'Neutral', 'Rotation Degree': 0},
+                     'Right Analysis': {'Center': (0, 0), 'Rotation': 'Neutral', 'Rotation Degree': 0},
+                     'Alpha': 0},
         }
 
         # Extend metrics to include tracks, initializing TracksMetrics
@@ -117,7 +74,7 @@ class StationsMetrics:
         right = self.landmarks[right_idx]['coords']
         dy = left[1] - right[1]
         # distance = math.sqrt(dx ** 2 + dy ** 2)
-        self.metrics[part]['Offset'] = dy
+        self.metrics[part]['Alpha'] = dy
 
     def _calculate_hand_rotation(self):
         left_hand_center, right_hand_center = None, None
@@ -133,7 +90,7 @@ class StationsMetrics:
 
             # Forming quadrilateral vertices: wrist, thumb, pinky, and again wrist to close the shape
             quadrilateral = [wrist, thumb, pinky, wrist]
-            area = _quadrilateral_area(quadrilateral)
+            area = quadrilateral_area(quadrilateral)
 
             if hand == 'Left Analysis':
                 left_hand_center = find_triangle_center_and_area(wrist, pinky, thumb)
@@ -145,8 +102,8 @@ class StationsMetrics:
             self.metrics['Hands'][hand]['Rotation'] = rotation
             self.metrics['Hands'][hand]['Rotation Degree'] = area
 
-        formatted_offset = round(left_hand_center[1] - right_hand_center[1], 2)
-        self.metrics['Hands']['Offset'] = formatted_offset
+        formatted_Alpha = round(left_hand_center[1] - right_hand_center[1], 2)
+        self.metrics['Hands']['Alpha'] = formatted_Alpha
 
     def _calculate_foot_metrics(self):
         left_foot_center, right_foot_center = None, None
@@ -166,28 +123,38 @@ class StationsMetrics:
 
             if foot == 'Left Analysis':
                 left_foot_center = find_triangle_center_and_area(ankle, heel, foot_index)
+                self.metrics['Feet'][foot]['Center'] = left_foot_center
                 rotation = 'External' if foot_index[0] > heel[0] else 'Internal'
             else:
                 right_foot_center = find_triangle_center_and_area(ankle, heel, foot_index)
+                self.metrics['Feet'][foot]['Center'] = right_foot_center
                 rotation = 'External' if foot_index[0] < heel[0] else 'Internal'
 
             self.metrics['Feet'][foot]['Rotation'] = rotation
             self.metrics['Feet'][foot]['Rotation Degree'] = area
 
-        formatted_offset = round(left_foot_center[1] - right_foot_center[1], 2)
-        self.metrics['Feet']['Offset'] = formatted_offset
+        formatted_Alpha = round(left_foot_center[1] - right_foot_center[1], 2)
+        self.metrics['Feet']['Alpha'] = formatted_Alpha
 
+
+####################
+# Tracks class #
+# Alpha -  reflect compression #
+# Lambda -  reflect weight distribution #
+#################################################
 
 class TracksMetrics:
     def __init__(self, pose_metrics_instance):
         self.pose_metrics_instance = pose_metrics_instance
         # Tracks structure initialized with placeholders for calculated values
         self.tracks = {
-            'Train Track 1 (Nose to Shoulder)': {'Left Length': 0, 'Right Length': 0, 'Offset': 0},  # Nose to Shoulder
-            'Train Track 2 (Shoulder to Hip)': {'Left Length': 0, 'Right Length': 0, 'Offset': 0},  # Shoulder to Hip
-            'Train Track 3 (Hip to Knees)': {'Left Length': 0, 'Right Length': 0, 'Offset': 0},  # Hip to Knee
-            'Train Track 4 (Knees to Foot)': {'Left Length': 0, 'Right Length': 0, 'Offset': 0},  # Knee to Foot
-            'Train Track 5 (Shoulder to Elbow)': {'Left Length': 0, 'Right Length': 0, 'Offset': 0},  # S. to Elbow
+
+            'Lateral Line': {'Alpha': 0, 'Lambda': 0},  # Train Track 1, Foot to Shoulder
+            'Oblique Sling': {'Alpha': 0, 'Lambda': 0},  # Train Track 2, Oblique Sling
+            'Lateral Line Proximal': {'Alpha': 0, 'Lambda': 0},  # Train Track 3, Shoulder to Hip
+            'Lateral Line Inferior': {'Alpha': 0, 'Lambda': 0},  # Train Track 4, Hip to Foot
+            'Lateral Line Superior': {'Alpha': 0, 'Lambda': 0},  # Train Track 5, Nose to Shoulder
+            'Arm Line': {'Alpha': 0, 'Lambda': 0},  # Train Track 6, Nose to Shoulder
         }
 
     def calculate_tracks(self):
@@ -198,27 +165,22 @@ class TracksMetrics:
             print("Landmarks are not available for calculation.")
             return
 
-        # Define the logic for each track using landmark indices
-        # You should adjust the indices based on your landmarks structure
-        # Nose - Calculated with mutual reference point
-        self.calculate_and_update_track(0, 0, 11, 12,
-                                        'Train Track 1 (Nose to Shoulder)')
-        # Other Tracks
-        self.calculate_and_update_track(11, 12, 23, 24,
-                                        'Train Track 2 (Shoulder to Hip)')
-        self.calculate_and_update_track(23, 24, 25, 26,
-                                        'Train Track 3 (Hip to Knees)')
-
         # For Track 4, assuming find_triangle_center_and_area returns (center_x, center_y, area)
-        left_foot_center = find_triangle_center_and_area(
-            landmarks[27]['coords'], landmarks[29]['coords'], landmarks[31]['coords'])
-        right_foot_center = find_triangle_center_and_area(
-            landmarks[28]['coords'], landmarks[30]['coords'], landmarks[32]['coords'])
-        self.calculate_and_update_track_for_foot(25, 26, left_foot_center, right_foot_center,
-                                                 'Train Track 4 (Knees to Foot)')
+        left_foot_center = self.pose_metrics_instance.metrics['Feet']['Left Analysis']['Center']
+        right_foot_center = self.pose_metrics_instance.metrics['Feet']['Right Analysis']['Center']
 
-        self.calculate_and_update_track(11, 12, 13, 14,
-                                        'Train Track 5 (Shoulder to Elbow)')
+        self.calculate_and_update_track_with_foot(11, 12, left_foot_center, right_foot_center,
+                                                  'Lateral Line')
+        self.calculate_and_update_track(11, 12, 24, 23,
+                                        'Oblique Sling')
+        self.calculate_and_update_track(11, 12, 23, 24,
+                                        'Lateral Line Proximal')
+        self.calculate_and_update_track_with_foot(23, 24, left_foot_center, right_foot_center,
+                                                  'Lateral Line Inferior')
+        self.calculate_and_update_track(0, 0, 11, 12,
+                                        'Lateral Line Superior')
+        self.calculate_and_update_track(0, 0, 11, 12,
+                                        'Arm Line')
 
         # Debug, After calculations, print or return self.tracks to see updated metrics
         print("Updated track metrics:", self.tracks)
@@ -230,71 +192,46 @@ class TracksMetrics:
         right_distance = calculate_distance(self.pose_metrics_instance.landmarks[right_reference]['coords'],
                                             self.pose_metrics_instance.landmarks[right_idx]['coords'])
 
-        # Calculate Angle offset based on vertical line - for better Shoulder-Hip relevance
-        if track_name == 'Train Track 2 (Shoulder to Hip)' and True:  # Specific logic for shoulder-to-hip track
+        # Calculate Lambda Angle for Tracks 1-4
+        if track_name not in ('Arm Line', 'Lateral Line Superior'):
             # Calculate angles with the vertical line
-            left_angle = (self.calculate_angle_with_vertical
+            left_angle = (calculate_angle_with_vertical
                           (self.pose_metrics_instance.landmarks[left_reference]['coords'],
                            self.pose_metrics_instance.landmarks[left_idx]['coords']))
-            right_angle = (self.calculate_angle_with_vertical
+            right_angle = (calculate_angle_with_vertical
                            (self.pose_metrics_instance.landmarks[right_reference]['coords'],
                             self.pose_metrics_instance.landmarks[right_idx]['coords']))
-            print("Left track 2 angle: ", left_angle)
-            print("Right track 2 angle: ", right_angle)
-            # Calculate angle offset percentage
-            angle_offset = abs(left_angle - right_angle) / 2
+
+            # Calculate abstract Lambda angle
+            angle_Alpha = abs(left_angle - right_angle) / 2
 
             # De-bugging
-            print("Train Track 2 left angle calculated:", left_angle)
-            print("Train Track 2 right angle calculated:", right_angle)
-            print("Train Track 2 angle offset:", angle_offset)
+            # print("Train Track 2 left angle calculated:", left_angle)
+            # print("Train Track 2 right angle calculated:", right_angle)
+            # print("Train Track 2 angle Alpha:", angle_Alpha)
 
-            # Adjust the track related to the lesser angle with the angle offset percentage
+            # Adjust the track related to the lesser angle with the angle Alpha percentage
             if left_angle > right_angle:
-                left_distance *= (1 + angle_offset / 100)
+                left_distance *= (1 + angle_Alpha / 100)
             else:
-                right_distance *= (1 + angle_offset / 100)
+                right_distance *= (1 + angle_Alpha / 100)
 
         # Debugging
-        print(f"Calculating {track_name}: Left Distance = {left_distance}, Right Distance = {right_distance}")
+        # print(f"Calculating {track_name}: Left Distance = {left_distance}, Right Distance = {right_distance}")
 
-        offset = calculate_percentage_difference(left_distance, right_distance)
+        Alpha = calculate_percentage_difference(left_distance, right_distance)
 
         # Update the track information
-        self.tracks[track_name]['Left Length'] = round(left_distance, 2)
-        self.tracks[track_name]['Right Length'] = round(right_distance, 2)
-        self.tracks[track_name]['Offset'] = offset
+        self.tracks[track_name]['Alpha'] = Alpha
 
-    def calculate_and_update_track_for_foot(self, left_idx, right_idx, left_foot_center, right_foot_center, track_name):
+    def calculate_and_update_track_with_foot(self, left_idx, right_idx, left_foot_center, right_foot_center,
+                                             track_name):
         # Special handling for foot centers as they are calculated differently
         left_distance = calculate_distance(self.pose_metrics_instance.landmarks[left_idx]['coords'],
                                            left_foot_center)
         right_distance = calculate_distance(self.pose_metrics_instance.landmarks[right_idx]['coords'],
                                             right_foot_center)
-        offset = calculate_percentage_difference(left_distance, right_distance)
+        Alpha = calculate_percentage_difference(left_distance, right_distance)
 
         # Update the track information for foot
-        self.tracks[track_name]['Left Length'] = left_distance
-        self.tracks[track_name]['Right Length'] = right_distance
-        self.tracks[track_name]['Offset'] = offset
-
-    @staticmethod
-    def calculate_angle_with_vertical(point1, point2):
-        dx = point2[0] - point1[0] + 1e-6  # Small term to prevent dx from being exactly zero
-        dy = point2[1] - point1[1]
-
-        # Check if dx is very small, indicating a nearly vertical line
-        if abs(dx) < 1e-6:
-            # If the line is almost vertical, it makes a 90-degree angle with the horizontal
-            angle_deg = 90.0
-        else:
-            slope = dy / dx
-            # Use atan to find the angle of the slope, then find its negative reciprocal
-            # Since atan returns radians, convert to degrees
-            if slope == 0:  # Directly handling the case where slope is exactly zero
-                angle_rad = math.pi / 2  # Vertical angle
-            else:
-                angle_rad = math.atan(-1 / slope)  # Calculating angle with vertical
-            angle_deg = math.degrees(angle_rad)
-
-        return abs(angle_deg)
+        self.tracks[track_name]['Alpha'] = Alpha
