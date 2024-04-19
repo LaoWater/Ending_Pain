@@ -192,37 +192,34 @@ class TracksMetrics:
         right_distance = calculate_distance(self.pose_metrics_instance.landmarks[right_reference]['coords'],
                                             self.pose_metrics_instance.landmarks[right_idx]['coords'])
 
-        # Calculate Lambda Angle for Tracks 1-4
-        if track_name not in ('Arm Line', 'Lateral Line Superior'):
-            # Calculate angles with the vertical line
-            left_angle = (calculate_angle_with_vertical
-                          (self.pose_metrics_instance.landmarks[left_reference]['coords'],
-                           self.pose_metrics_instance.landmarks[left_idx]['coords']))
-            right_angle = (calculate_angle_with_vertical
-                           (self.pose_metrics_instance.landmarks[right_reference]['coords'],
-                            self.pose_metrics_instance.landmarks[right_idx]['coords']))
+        left_angle = (calculate_angle_with_vertical
+                      (self.pose_metrics_instance.landmarks[left_reference]['coords'],
+                       self.pose_metrics_instance.landmarks[left_idx]['coords']))
+        right_angle = (calculate_angle_with_vertical
+                       (self.pose_metrics_instance.landmarks[right_reference]['coords'],
+                        self.pose_metrics_instance.landmarks[right_idx]['coords']))
 
-            # Calculate abstract Lambda angle
-            angle_Alpha = abs(left_angle - right_angle) / 2
+        # Calculate abstract Lambda angle
+        Lambda = abs(left_angle - right_angle) / 2
 
-            # De-bugging
-            # print("Train Track 2 left angle calculated:", left_angle)
-            # print("Train Track 2 right angle calculated:", right_angle)
-            # print("Train Track 2 angle Alpha:", angle_Alpha)
-
-            # Adjust the track related to the lesser angle with the angle Alpha percentage
-            if left_angle > right_angle:
-                left_distance *= (1 + angle_Alpha / 100)
-            else:
-                right_distance *= (1 + angle_Alpha / 100)
+        # Adjust the track related to the lesser angle with the angle Alpha percentage
+        if left_angle > right_angle:
+            left_distance *= (1 + Lambda / 100)
+        else:
+            right_distance *= (1 + Lambda / 100)
 
         # Debugging
         # print(f"Calculating {track_name}: Left Distance = {left_distance}, Right Distance = {right_distance}")
+        # De-bugging
+        # print("Train Track 2 left angle calculated:", left_angle)
+        # print("Train Track 2 right angle calculated:", right_angle)
+        # print("Train Track 2 angle Alpha:", angle_Alpha)
 
         Alpha = calculate_percentage_difference(left_distance, right_distance)
 
         # Update the track information
         self.tracks[track_name]['Alpha'] = Alpha
+        self.tracks[track_name]['Lambda'] = Lambda
 
     def calculate_and_update_track_with_foot(self, left_idx, right_idx, left_foot_center, right_foot_center,
                                              track_name):
@@ -231,7 +228,19 @@ class TracksMetrics:
                                            left_foot_center)
         right_distance = calculate_distance(self.pose_metrics_instance.landmarks[right_idx]['coords'],
                                             right_foot_center)
+        left_angle = (calculate_angle_with_vertical
+                      (self.pose_metrics_instance.landmarks[left_idx]['coords'],
+                       left_foot_center))
+        right_angle = (calculate_angle_with_vertical
+                       (self.pose_metrics_instance.landmarks[right_idx]['coords'],
+                        right_foot_center))
+
+        # Calculate abstract Alpha Track length difference
         Alpha = calculate_percentage_difference(left_distance, right_distance)
+
+        # Calculate abstract Lambda angle
+        Lambda = abs(left_angle - right_angle) / 2
 
         # Update the track information for foot
         self.tracks[track_name]['Alpha'] = Alpha
+        self.tracks[track_name]['Lambda'] = Lambda

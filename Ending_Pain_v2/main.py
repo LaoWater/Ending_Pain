@@ -8,7 +8,7 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-from metrics_classes import StationsMetrics, TracksMetrics
+from metrics_classes_v2 import StationsMetrics, TracksMetrics
 from calculating_compressions import calculate_compressions, print_calculated_compressions
 
 
@@ -122,6 +122,11 @@ cv2.imshow('Blueprint with Landmarks', blueprint_processed_grid)
 
 # Updating Tracks class once Stations is complete.
 tracks_metrics = TracksMetrics(stations_metrics)
+
+print("\nTrack Metrics: \n*Dictionary \nPositive Offset = Right Lateral Line(Side) Compression"
+      "\nNegative Offset = Left LL. (Side) Compression\n")
+for track, details in stations_metrics.tracksMetrics.tracks.items():
+    print(f"{track}: {details}")
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()
