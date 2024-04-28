@@ -1,5 +1,5 @@
 from geometry_utils import (quadrilateral_area, calculate_distance, calculate_angle_with_vertical,
-                            find_triangle_center_and_area, calculate_percentage_difference)
+                            find_triangle_center_and_area, calculate_percentage_difference, modified_sigmoid)
 import math
 
 
@@ -53,6 +53,8 @@ class StationsMetrics:
         if index in self.landmarks:
             self.landmarks[index]['coords'] = coords
         self.calculate_metrics()
+
+    def calculate_tracks(self):
         self.tracksMetrics.calculate_tracks()  # Trigger tracks calculation
 
     def calculate_metrics(self):
@@ -99,6 +101,8 @@ class StationsMetrics:
                 right_hand_center = find_triangle_center_and_area(wrist, pinky, thumb)
                 rotation = 'Internal' if pinky[0] < thumb[0] else 'External'
 
+            # Calculate sigmoid to transform the normalized value to a range from 0 to 1
+            # sigmoid_output = round(1 / (1 + math.exp(-area)), 2)
             self.metrics['Hands'][hand]['Rotation'] = rotation
             self.metrics['Hands'][hand]['Rotation Degree'] = area
 
@@ -119,7 +123,8 @@ class StationsMetrics:
 
             # Assuming find_triangle_center and _quadrilateral_area or similar are defined elsewhere
             triangle_data = find_triangle_center_and_area(ankle, heel, foot_index)
-            area = triangle_data[2]
+            # Applying Normalization
+            area = triangle_data[2] / 200
 
             if foot == 'Left Analysis':
                 left_foot_center = find_triangle_center_and_area(ankle, heel, foot_index)
@@ -130,8 +135,9 @@ class StationsMetrics:
                 self.metrics['Feet'][foot]['Center'] = right_foot_center
                 rotation = 'External' if foot_index[0] < heel[0] else 'Internal'
 
+            sigmoid_area = round(1 / (1 + math.exp(-area)), 2)
             self.metrics['Feet'][foot]['Rotation'] = rotation
-            self.metrics['Feet'][foot]['Rotation Degree'] = area
+            self.metrics['Feet'][foot]['Rotation Degree'] = sigmoid_area
 
         formatted_Alpha = round(left_foot_center[1] - right_foot_center[1], 2)
         self.metrics['Feet']['Alpha'] = formatted_Alpha
@@ -156,6 +162,15 @@ class TracksMetrics:
             'Lateral Line Superior': {'Alpha': 0, 'Lambda': 0},  # Train Track 5, Nose to Shoulder
             'Arm Line': {'Alpha': 0, 'Lambda': 0},  # Train Track 6, Nose to Shoulder
         }
+        # Track weights
+        self.track_weights = {
+            'Lateral Line': 23,
+            'Oblique Sling': 17,
+            'Lateral Line Proximal': 22,
+            'Lateral Line Inferior': 33,
+            'Lateral Line Superior': 5,
+            'Arm Line': 0,
+        }
 
     def calculate_tracks(self):
         print("Calculating tracks...")  # Debugging
@@ -179,7 +194,7 @@ class TracksMetrics:
                                                   'Lateral Line Inferior')
         self.calculate_and_update_track(0, 0, 11, 12,
                                         'Lateral Line Superior')
-        self.calculate_and_update_track(0, 0, 11, 12,
+        self.calculate_and_update_track(11, 12, 13, 14,
                                         'Arm Line')
 
         # Debug, After calculations, print or return self.tracks to see updated metrics
@@ -200,9 +215,8 @@ class TracksMetrics:
                         self.pose_metrics_instance.landmarks[right_idx]['coords']))
 
         # Calculate abstract Lambda angle
-        Lambda = abs(left_angle - right_angle) / 2
-
-        # Adjust the track related to the lesser angle with the angle Alpha percentage
+        Lambda = round((left_angle - right_angle),2)
+        # Adjust the track length related to the lesser angle with the angle Alpha percentage
         if left_angle > right_angle:
             left_distance *= (1 + Lambda / 100)
         else:
@@ -211,11 +225,15 @@ class TracksMetrics:
         # Debugging
         # print(f"Calculating {track_name}: Left Distance = {left_distance}, Right Distance = {right_distance}")
         # De-bugging
-        # print("Train Track 2 left angle calculated:", left_angle)
-        # print("Train Track 2 right angle calculated:", right_angle)
+        print(f"\n{track_name} Left angle :", left_angle)
+        print(f"\n{track_name} Right angle :", right_angle)
         # print("Train Track 2 angle Alpha:", angle_Alpha)
 
         Alpha = calculate_percentage_difference(left_distance, right_distance)
+
+        # Apply Normalization & Standardization
+        Alpha = round(modified_sigmoid(Alpha), 2)
+        Lambda = round(modified_sigmoid(Lambda), 2)
 
         # Update the track information
         self.tracks[track_name]['Alpha'] = Alpha
@@ -239,8 +257,37 @@ class TracksMetrics:
         Alpha = calculate_percentage_difference(left_distance, right_distance)
 
         # Calculate abstract Lambda angle
-        Lambda = abs(left_angle - right_angle) / 2
+        Lambda = round(abs(left_angle - right_angle),2)
+
+        print(f"\n{track_name} Left angle :", left_angle)
+        print(f"\n{track_name} Right angle :", right_angle)
+
+        # Apply Normalization & Standardization
+        Alpha = round(modified_sigmoid(Alpha), 2)
+        Lambda = round(modified_sigmoid(Lambda), 2)
 
         # Update the track information for foot
         self.tracks[track_name]['Alpha'] = Alpha
         self.tracks[track_name]['Lambda'] = Lambda
+
+    def sum_of_lambdas(self):
+        total_lambda_weighted = 0
+        for track_name, track_data in self.tracks.items():
+            lambda_value = float(track_data['Lambda'])
+            track_weight = self.track_weights[track_name]
+
+            if lambda_value > 7:
+                lambda_value = 7 + (lambda_value - 7) * 0.5
+
+            weighted_lambda = lambda_value * track_weight
+            total_lambda_weighted += weighted_lambda
+
+        # Normalization
+        print("Sum of labmdas = ", total_lambda_weighted)
+        print("(Before Normalization) \n")
+        normalized_value = total_lambda_weighted / 100
+
+        # Calculate sigmoid to transform the normalized value to a range from 0 to 1
+        sigmoid_output = round( 1 / (1 + math.exp(-normalized_value)), 4)
+
+        return sigmoid_output

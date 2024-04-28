@@ -8,9 +8,8 @@
 import cv2
 import mediapipe as mp
 import numpy as np
-from metrics_classes_v2 import StationsMetrics, TracksMetrics
+from metrics_classes import StationsMetrics, TracksMetrics
 from calculating_compressions import calculate_compressions, print_calculated_compressions
-
 
 # Define a function to draw 4x4 pixel squares on the given image at the specified center position.
 def draw_square(image, center, color=(0, 0, 255), size=1):
@@ -107,7 +106,7 @@ def image_blueprint():
 ###################
 
 stations_metrics = StationsMetrics()
-image_path = r'C:\Users\baciu\Desktop\Neo\Ending_Pain\Photos\Anterior_view_3.JPG'
+image_path = 'Photos/Anterior_view_2.JPG'
 
 pose_data, image_mediapipe = process_image_mediapipe(image_path)
 blueprint_processed_grid = image_blueprint()
@@ -123,10 +122,33 @@ cv2.imshow('Blueprint with Landmarks', blueprint_processed_grid)
 # Updating Tracks class once Stations is complete.
 tracks_metrics = TracksMetrics(stations_metrics)
 
+###################################
+# Formatting and Printing Results #
+###################################
+
+print("\nStations Metrics: \n*Dictionary \nPositive Offset = Higher Left side Station (Point) ~= Right Side Compression"
+      "\nNegative Offset = Lower Left Side Station ~= Left Side Compression\n")
+for part, metrics in stations_metrics.metrics.items():
+    # Print general Offset for all parts
+    print(f'{part}: Offset = {metrics["Offset"]}')
+
+    # Automate handling for 'Hands' and 'Feet' to include both 'Left Analysis' and 'Right Analysis' details
+    if part in ['Hands', 'Feet']:
+        for side in ['Left', 'Right']:
+            analysis_key = f'{side} Analysis'
+            if analysis_key in metrics:
+                analysis_details = ', '.join([f'{key}: {value}' for key, value in metrics[analysis_key].items()])
+                print(f'{part}: {side} Analysis: {analysis_details}')
+print('\n', end='')  # Add an extra newline for separation between parts
+
 print("\nTrack Metrics: \n*Dictionary \nPositive Offset = Right Lateral Line(Side) Compression"
       "\nNegative Offset = Left LL. (Side) Compression\n")
 for track, details in stations_metrics.tracksMetrics.tracks.items():
     print(f"{track}: {details}")
+
+# Calculating Compressions of types Stations and Tracks
+ai_calculated_compressions = calculate_compressions(stations_metrics, stations_metrics.tracksMetrics)
+print_calculated_compressions(ai_calculated_compressions)
 
 cv2.waitKey(0)
 cv2.destroyAllWindows()

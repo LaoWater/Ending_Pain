@@ -8,6 +8,11 @@ Point = Tuple[float, float]
 Triangle = Tuple[Point, Point, Point]
 
 
+# Modified sigmoid function used for standardization of stations & tracks.
+def modified_sigmoid(x, k=0.15):  # Adjust 'k' to change the steepness
+    return 2 / (1 + np.exp(-k * x)) - 1
+
+
 # Activation function
 def sigmoid(x):
     return 1 / (1 + np.exp(-x))
@@ -47,11 +52,10 @@ def calculate_percentage_difference(left_length, right_length):
     # Handle division by zero
     if right_length == 0:
         # Return a formatted string indicating no comparison can be made
-        return "N/A %"  # Adjust as needed, e.g., to "0.00 %" or another placeholder
+        return None  # Adjust as needed, e.g., to "0.00 %" or another placeholder
     # Calculate the percentage difference and format it as a string with two decimal places followed by '%'
-    offset = ((left_length - right_length) / right_length) * 100
-    formatted_offset = "{:.2f} %".format(offset)
-    return formatted_offset
+    offset = round(((left_length - right_length) / right_length) * 100, 2)
+    return offset
 
 
 def find_triangle_center_and_area(x, y, z):
