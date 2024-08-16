@@ -73,6 +73,7 @@ def process_horizon_nexus_dataset(value):
 
 def connect_to_database():
     # For Windows Authentication
+    # Changing tp postgresSQL soon, as
     server = r'DESKTOP-48MNGTA\SQLEXPRESS'  # Your server name
     database = 'master'  # Your database name
 

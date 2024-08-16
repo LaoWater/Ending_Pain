@@ -192,7 +192,7 @@ def generate_json_results(results, nexus_type):
 ###################
 ###################
 stations_metrics = StationsMetrics()
-image_path = r'C:\Users\baciu\Desktop\Neo\Ending_Pain\Photos\Anterior_view_6.JPG'
+image_path = r'C:\Users\baciu\Desktop\Neo\Ending_Pain\Photos\Anterior_view_3.JPG'
 
 pose_data, image_mediapipe = process_image_mediapipe(image_path)
 blueprint_processed_grid = image_blueprint()
@@ -232,6 +232,7 @@ generate_json_results(horizon_json_results, 'horizon')
 # Convert the processed image back to BGR for displaying with OpenCV.
 image_bgr = cv2.cvtColor(image_mediapipe, cv2.COLOR_RGB2BGR)
 # Display the original image with pose landmarks.
+print("Asupa before printing....")
 cv2.imshow('Output BGR', image_bgr)
 # Display the blueprint grid.
 cv2.imshow('Blueprint with Landmarks', blueprint_processed_grid)

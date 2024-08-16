@@ -5,7 +5,6 @@ import json
 import sys
 import os
 
-# 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#
 # Initialize the OpenAI client with your API key
 client = OpenAI()
 
@@ -43,7 +42,7 @@ response = client.chat.completions.create(
 You are an AI trained to assist with physical therapy treatment planning. You will create a 
 4-week program (4 phases) for the client, considering the data from Origin Nexus, Nebula Nexus, and Horizon Nexus.
 These measurements were calculated by a neural network designed by specialists to highlight all the 
-weak links in the body. Trust and respect them 100%.
+weak links in the body. Trust and respect them 100%.    
 
 For each dataset:
 - Origin Nexus
@@ -64,9 +63,9 @@ For Activate/Shorten type, use combinations of:
 - Unilateral patterns of exercises
 
 Start gently in the first weeks and deepen as the program progresses.
-Focus on multiple muscle (anatomy train line) activation to use more complex approaches than something isolated.
+Focus on multiple muscle (anatomy train lines) activation to use more complex approaches than something isolated.
 
-Before starting to generate, take some time to truly process the data, understanding the biomechanical pattern. 
+Before starting to generate, take some time to truly process the data, understanding the biomechanical patterns. 
 Offer insights as we go through the weeks.
 
 Don't use "etc.", as the user has to receive some clear indications of exactly what exercises and methods to use 
